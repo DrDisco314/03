@@ -1,0 +1,2 @@
+hexdump.exe: CS240.ASM HEXDUMP.ASM READ.ASM
+	ml CS240.ASM HEXDUMP.ASM READ.ASM /link irvine16
