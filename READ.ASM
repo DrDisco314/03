@@ -8,42 +8,9 @@ include cs240.inc
 .data
 
 readbuf byte "    "
+badr BYTE "File could not be opened"
 
 .code
-
-;; read a single character from a file handle (ax)
-;; return char in dx, -1 if end of file
-ReadFileChar240 proc
-	push ax
-	push bx
-	push cx
-
-
-	mov bx,ax		;; put filehandle in bx
-	mov ah,3fh		;; read function
-	mov dx, offset readbuf  ;; store in memory here
-	mov cx,1		;; read only 1 char
-	int 21h			;; READ!!
-
-	jc coda		;; error, exit	
-
-	cmp ax,0
-	jz EndOfFile
-
-	mov bx,offset readbuf
-	mov dh,0
-	mov dl,[bx]
-	jmp coda
-
-EndOfFile:
-	mov dx,-1
-
-
-coda:	pop cx
-	pop bx
-	pop ax
-	ret
-ReadFileChar240 endp
 
 ;; DX: offset of buffer for the command line tail.
 getcmdtail proc
@@ -96,7 +63,8 @@ ReadFileN proc
 	jc bad
 	mov cx,ax	
 	jmp coda
-bad: 	mov dx, offset badr
+bad: 	
+	mov dx, offset badr
 	call writestring240
 	call newline
 	
@@ -107,65 +75,4 @@ coda:	pop dx
 	ret
 ReadFileN endp
 
-
-
-
-;;------------------------------
-.data
-
-cmdtail BYTE ?
-filename BYTE "                    ",0
-errfnf BYTE "Error: File not found",0
-errnocmd BYTE "Usage: cat filename",0
-
-.code
-main proc
-	mov ax,@data
-	mov ds,ax
-
-
-	cmp byte ptr es:[80h],0			;; if we have no tail at all
-	jnz cont
-
-	mov dx,offset errnocmd		
-	call writeString240
-	call newline
-	jmp quit
-
-cont:	
-	mov dx,offset cmdtail
-	call getcmdtail
-
-	mov dx,offset filename
-
-	call writestring240
-	call newline
-
-	call OpenInputFile240	;; ax will have a file handle
-	jnc top					;; carry will be 1 if bad
-
-	;; bad open
-	mov dx,offset errfnf
-	call writestring240
-	call newline
-	jmp quit
-
-		
-top:	
-	call ReadFileChar240
-	cmp dx,-1
-	jz done
-	push ax				;; save filehandle
-	mov al,dl	
-	call WriteChar240	;; write character
-	pop ax				;; restore filehandle
-	jmp top
-
-done:	call CloseFile240
-	
-
-quit:	mov ax,4c00h
-	int 21h
-main endp
-;;----------------------------------------
 END

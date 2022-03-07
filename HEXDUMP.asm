@@ -3,6 +3,8 @@ title hexdump
 include Irvine16.inc
 include cs240.inc
 
+getcmdtail proto
+
 .8086
 
 .data
@@ -97,13 +99,65 @@ done:    pop ax
     ret
 print ENDP
 
-main PROC
-	mov ax,@data
-	mov ds,ax
 
-	mov ax,4C00h
-	int 21h
+.data
 
-main ENDP
+cmdtail BYTE ?
+filename BYTE "                    ",0
+errfnf BYTE "Error: File not found",0
+errnocmd BYTE "Usage: cat filename",0
+
+
+.code
+
+main proc
+    mov ax,@data
+    mov ds,ax
+
+
+    cmp byte ptr es:[80h],0         ;; if we have no tail at all
+    jnz cont
+
+    mov dx,offset errnocmd      
+    call writeString240
+    call newline
+    jmp quit
+
+cont:   
+    mov dx,offset cmdtail
+    call getcmdtail
+
+    mov dx,offset filename
+
+    call writestring240
+    call newline
+
+    call OpenInputFile240   ;; ax will have a file handle
+    jnc top                 ;; carry will be 1 if bad
+
+    ;; bad open
+    mov dx,offset errfnf
+    call writestring240
+    call newline
+    jmp quit
+
+        
+top:    
+    call ReadFileChar240
+    cmp dx,-1
+    jz done
+    push ax             ;; save filehandle
+    mov al,dl   
+    call WriteChar240   ;; write character
+    pop ax              ;; restore filehandle
+    jmp top
+
+done:   
+    call CloseFile240
+
+quit:   
+    mov ax,4c00h
+    int 21h
+main endp
 
 END main
