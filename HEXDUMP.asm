@@ -11,8 +11,6 @@ _writehex_nybble proto
 .data
 
 stri BYTE 16 dup('0'),0             ;; Stores string to print in third column
-totalbytes BYTE 0                   ;; Counter for number of bytes
-totalbytestring BYTE "00000000",0
 hexdigs BYTE "0123456789ABCDEF"
 hexMem BYTE 8 dup(0)                ;; 8 Bytes all initialized to 0 to store mem
 
@@ -31,27 +29,6 @@ printspace PROC
     popf
     ret
 printspace ENDP
-
-
-;; Prints the first column: the offset of each line from the beginning of the file.
-printcount PROC
-    pushf
-    push ax
-    push dx
-
-    ;mov ax,offset totalbytestring
-    ;add ax,16
-
-    ;call WriteDec240
-
-    mov dx,offset totalbytestring
-    call WriteString240
-
-    pop dx
-    pop ax
-    popf
-    ret
-printcount ENDP
 
 
 ;; Prints the end column: the chars represented by hex
@@ -149,7 +126,7 @@ print PROC
     cmp cx,0
     jnz next
     call printMem
-    ;;call printcount                         ;prints the first column
+    ;;call printcount                       ;prints the first column
     call printspace
     call printspace                         ;print spacing
 
@@ -188,14 +165,14 @@ setMem proc
 
     mov bx,offset hexMem    ;; bx = array to place into
     mov si,offset hexMem
-    add si,lengthof hexmem
+    add si,lengthof hexmem 
     dec si                  ;; start at right hand side
     clc
 
-    add [si],cx
-    cmp byte ptr [si],16
-    jb nc
-    sub byte ptr [si],16
+    add [si],cx             ;; hexMem(size) + cx
+    cmp byte ptr [si],16    ;; Check for carry
+    jb nc                   ;; If no carry, done
+    sub byte ptr [si],16   
     stc
     jmp cont
 
@@ -204,11 +181,11 @@ nc:
     jmp done
 
 cont:
-    dec si
-    inc byte ptr [si]
-    cmp byte ptr [si],16
-    jb nc
-    sub byte ptr [si],16
+    dec si                  ;; Move back in the memArray
+    inc byte ptr [si]       ;; Inc from the carry
+    cmp byte ptr [si],16    ;; Check for ripple carry
+    jb nc                   ;; If no carry, done
+    sub byte ptr [si],16 
     stc
     jmp cont
 
@@ -223,21 +200,22 @@ setMem endp
 ;; Prints out the total memory used by a file thus far
 printMem proc
     pushf
-    push ax
     push bx
     push cx
+    push dx
 
     mov bx,offset hexMem   ;; bx = array to place mem into
-    mov cx,lengthof hexMem
+    mov cx,lengthof hexMem ;; Iterate through all elements of the array
 top:
-    mov dl,[bx]
-    call _writehex_nybble
+    mov dx,0
+    mov dl,[bx]             
+    call _writehex_nybble   ;; Writes a hex nybble
     inc bx
     loop top
 
+    pop dx
     pop cx
     pop bx
-    pop ax
     popf
     ret
 printMem endp
@@ -298,6 +276,9 @@ top:
 
 done:
     call CloseFile240
+    call newline
+    call setMem
+    call printMem
 
 quit:
     mov ax,4c00h
