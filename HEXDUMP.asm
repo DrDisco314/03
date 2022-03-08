@@ -164,12 +164,13 @@ printfinal PROC
     push dx
     push di
 
-    ;mov ah,03h
-    ;int 10h
-    ;mov bh,0
-    mov dh,24
+    push cx
+    mov ah,03h
+    mov bh,0
+    int 10h
     mov dl,60
     call JumpCursor
+    pop cx
 
     mov di,0
 
@@ -317,10 +318,12 @@ top:
 done:
     call CloseFile240
 
+    cmp cx,0
+    jz after
     call printfinal
-
     call newline
-    call setMem
+
+after:  call setMem
     call printMem
 
 quit:
