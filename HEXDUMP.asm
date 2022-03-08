@@ -89,7 +89,7 @@ printchar PROC
     push ax
     mov dx,ax
     mov cx,4
-shift:  
+shift:
     shr dl,1                                 ;shift dl to get next nybble
     loop shift
 
@@ -130,7 +130,7 @@ print PROC
     call printspace
     call printspace                         ;print spacing
 
-next:    
+next:
     call printchar                          ;prints the char in hex
     call printspace                         ;prints space after char
     call storechar                          ;stores the char in string to print at end
@@ -138,7 +138,7 @@ next:
     jnz incr
     call printspace                         ;at index 7 print an extra space
 
-incr:    
+incr:
     inc cx                                  ;increment count
 
     cmp cx,16                               ;if count is 16, that was the last char on line
@@ -148,11 +148,51 @@ incr:
     call setMem
     mov cx,0                                ;reset count
 
-done:    
+done:
     pop ax
     popf
     ret
 print ENDP
+
+
+;; IN: CX, length of string to print
+printfinal PROC
+    pushf
+    push ax
+    push bx
+    push cx
+    push dx
+    push di
+
+    ;mov ah,03h
+    ;int 10h
+    ;mov bh,0
+    mov dh,24
+    mov dl,60
+    call JumpCursor
+
+    mov di,0
+
+    mov al,'|'
+    call WriteChar240
+
+top:    mov al,stri[di]
+    call WriteChar240
+    inc di
+    loop top
+
+    mov al,'|'
+    call WriteChar240
+
+    pop di
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    popf
+    ret
+printfinal ENDP
+
 
 .code
 
@@ -165,14 +205,14 @@ setMem proc
 
     mov bx,offset hexMem    ;; bx = array to place into
     mov si,offset hexMem
-    add si,lengthof hexmem 
+    add si,lengthof hexmem
     dec si                  ;; start at right hand side
     clc
 
     add [si],cx             ;; hexMem(size) + cx
     cmp byte ptr [si],16    ;; Check for carry
     jb nc                   ;; If no carry, done
-    sub byte ptr [si],16   
+    sub byte ptr [si],16
     stc
     jmp cont
 
@@ -185,7 +225,7 @@ cont:
     inc byte ptr [si]       ;; Inc from the carry
     cmp byte ptr [si],16    ;; Check for ripple carry
     jb nc                   ;; If no carry, done
-    sub byte ptr [si],16 
+    sub byte ptr [si],16
     stc
     jmp cont
 
@@ -208,7 +248,7 @@ printMem proc
     mov cx,lengthof hexMem ;; Iterate through all elements of the array
 top:
     mov dx,0
-    mov dl,[bx]             
+    mov dl,[bx]
     call _writehex_nybble   ;; Writes a hex nybble
     inc bx
     loop top
@@ -276,6 +316,9 @@ top:
 
 done:
     call CloseFile240
+
+    call printfinal
+
     call newline
     call setMem
     call printMem
