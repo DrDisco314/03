@@ -9,10 +9,17 @@ _writehex_nybble proto
 .8086
 
 .data
+<<<<<<< HEAD
 stri BYTE 16 dup('0'),0             ;; Stores string to print in third column
 totalbytes BYTE 0                   ;; Counter for number of bytes
 hexdigs BYTE "0123456789ABCDEF"
 hexMem BYTE 8 dup(0)                ;; 8 Bytes all initialized to 0 to store mem
+=======
+stri BYTE 16 dup('0'),0                   ;stores string to print in third column
+totalbytes BYTE 0                      ;counter for number of bytes
+totalbytestring BYTE "00000000",0
+hexdigs BYTE "0123456789abcdef"
+>>>>>>> b37720b9dd22db959b5be5df46870092453bc853
 
 .code
 
@@ -20,7 +27,12 @@ hexMem BYTE 8 dup(0)                ;; 8 Bytes all initialized to 0 to store mem
 ;; Prints out a single space.
 printspace PROC
     pushf
+    push ax
 
+    mov al,' '
+    call WriteChar240
+
+    pop ax
     popf
     ret
 printspace ENDP
@@ -30,12 +42,17 @@ printspace ENDP
 printcount PROC
     pushf
     push ax
+    push dx
 
-    ;mov ax,totalbytes
+    ;mov ax,offset totalbytestring
     ;add ax,16
 
     ;call WriteDec240
 
+    mov dx,offset totalbytestring
+    call WriteString240
+
+    pop dx
     pop ax
     popf
     ret
@@ -45,18 +62,22 @@ printcount ENDP
 ;; Prints the end column: the chars represented by hex
 printend PROC
     pushf
+    push ax
     push dx
 
-    ;; print line
+    mov al,'|'
+    call WriteChar240
 
     mov dx,OFFSET stri
     call WriteString240
 
-    ;; print line
+    mov al,'|'
+    call WriteChar240
 
     call newline
 
     pop dx
+    pop ax
     popf
     ret
 printend ENDP
@@ -67,7 +88,18 @@ printend ENDP
 ;; IN: CX, index to store char in
 storechar PROC
     pushf
+    push ax
+    push di
 
+    cmp al,32                           ;checks to see if al is a printable char
+    jae next
+    mov al,'.'                          ;if not make it a period
+
+next:    mov di,cx
+    mov stri[di],al                     ;store char in string in memory
+
+    pop di
+    pop ax
     popf
     ret
 storechar ENDP
@@ -225,7 +257,7 @@ main proc
     mov ax,@data
     mov ds,ax
 
-
+    mov cx,0
     cmp byte ptr es:[80h],0         ;; if we have no tail at all
     jnz cont
 
@@ -259,7 +291,8 @@ top:
     jz done
     push ax             ;; save filehandle
     mov al,dl
-    call WriteChar240   ;; write character
+    ;call WriteChar240   ;; write character
+    call print
     pop ax              ;; restore filehandle
     jmp top
 
