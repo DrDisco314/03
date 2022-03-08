@@ -8,7 +8,7 @@ getcmdtail proto
 .8086
 
 .data
-str BYTE 16 dup(0),0                   ;stores string to print in third column
+str BYTE 16 dup('0'),0                   ;stores string to print in third column
 totalbytes BYTE 0                      ;counter for number of bytes
 
 .code
@@ -26,10 +26,10 @@ printcount PROC
     pushf
     push ax
 
-    mov ax,totalbytes
-    add ax,16
+    ;mov ax,totalbytes
+    ;add ax,16
 
-    call WriteDec240
+    ;call WriteDec240
 
     pop ax
     popf
