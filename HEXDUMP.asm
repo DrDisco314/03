@@ -9,17 +9,12 @@ _writehex_nybble proto
 .8086
 
 .data
-<<<<<<< HEAD
+
 stri BYTE 16 dup('0'),0             ;; Stores string to print in third column
 totalbytes BYTE 0                   ;; Counter for number of bytes
+totalbytestring BYTE "00000000",0
 hexdigs BYTE "0123456789ABCDEF"
 hexMem BYTE 8 dup(0)                ;; 8 Bytes all initialized to 0 to store mem
-=======
-stri BYTE 16 dup('0'),0                   ;stores string to print in third column
-totalbytes BYTE 0                      ;counter for number of bytes
-totalbytestring BYTE "00000000",0
-hexdigs BYTE "0123456789abcdef"
->>>>>>> b37720b9dd22db959b5be5df46870092453bc853
 
 .code
 
@@ -153,33 +148,38 @@ print PROC
 
     cmp cx,0
     jnz next
-    call printcount                         ;prints the first column
+    call printMem
+    ;;call printcount                         ;prints the first column
     call printspace
     call printspace                         ;print spacing
 
-next:    call printchar                     ;prints the char in hex
+next:    
+    call printchar                          ;prints the char in hex
     call printspace                         ;prints space after char
     call storechar                          ;stores the char in string to print at end
     cmp cx,7
     jnz incr
     call printspace                         ;at index 7 print an extra space
 
-incr:    inc cx                             ;increment count
+incr:    
+    inc cx                                  ;increment count
 
     cmp cx,16                               ;if count is 16, that was the last char on line
     jnz done
     call printspace                         ;print extra space
     call printend                           ;prints the last column
+    call setMem
     mov cx,0                                ;reset count
 
-done:    pop ax
+done:    
+    pop ax
     popf
     ret
 print ENDP
 
 .code
 
-;; IN: CX, an integer representing how much memory to add to total (cx < 16)
+;; IN: lineOffset, an integer representing how much memory to add to total (lineOffset < 16)
 ;; Prints out the total memory used by a file thus far
 setMem proc
     pushf
@@ -300,10 +300,6 @@ done:
     call CloseFile240
 
 quit:
-    call newline
-    mov cx,16
-    call setMem
-    call printMem
     mov ax,4c00h
     int 21h
 main endp
