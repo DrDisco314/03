@@ -10,7 +10,7 @@ getcmdtail proto
 .data
 stri BYTE 16 dup('0'),0                   ;stores string to print in third column
 totalbytes BYTE 0                      ;counter for number of bytes
-hexdigs BYTE "0123456789ABCDEF"
+hexdigs BYTE "0123456789abcdef"
 
 .code
 
