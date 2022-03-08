@@ -65,6 +65,42 @@ storechar PROC
     ret
 storechar ENDP
 
+;; Prints a char in it's hex form
+;; IN: al, a char to print
+printchar PROC
+    pushf
+    push ax
+    push cx
+    push dx
+    push si
+
+    push ax
+    mov dx,ax
+    mov cx,4
+shift:  shr dl,1                             ;shift dl to get next nybble
+    loop shift
+
+    mov dh,0	                             ;clear the high bits of dx
+	mov si,dx                                ;index dx
+	mov al,hexdigs[si]                       ;indexing to get hex digit
+	call WriteChar240                        ;print second hex dig
+    pop ax
+
+    mov dx,ax
+    and dx,00001111b
+    mov dh,0	                             ;clear the high bits of dx
+	mov si,dx                                ;index dx
+	mov al,hexdigs[si]                       ;indexing to get hex digit
+	call WriteChar240                        ;print first hex dig
+
+    pop si
+    pop dx
+    pop cx
+    pop ax
+    popf
+    ret
+printchar ENDP
+
 ;; Prints the output line by line
 ;; IN: al, a char
 ;; IN: CX, a count (0-15)
@@ -118,12 +154,12 @@ main proc
     cmp byte ptr es:[80h],0         ;; if we have no tail at all
     jnz cont
 
-    mov dx,offset errnocmd      
+    mov dx,offset errnocmd
     call writeString240
     call newline
     jmp quit
 
-cont:   
+cont:
     mov dx,offset cmdtail
     call getcmdtail
 
@@ -141,21 +177,21 @@ cont:
     call newline
     jmp quit
 
-        
-top:    
+
+top:
     call ReadFileChar240
     cmp dx,-1
     jz done
     push ax             ;; save filehandle
-    mov al,dl   
+    mov al,dl
     call WriteChar240   ;; write character
     pop ax              ;; restore filehandle
     jmp top
 
-done:   
+done:
     call CloseFile240
 
-quit:   
+quit:
     mov ax,4c00h
     int 21h
 main endp
