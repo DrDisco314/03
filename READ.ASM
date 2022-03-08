@@ -68,7 +68,8 @@ bad:
 	call writestring240
 	call newline
 	
-coda:	pop dx
+coda:	
+	pop dx
 	pop bx
 	pop ax
 	popf

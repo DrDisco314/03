@@ -4,15 +4,18 @@ include Irvine16.inc
 include cs240.inc
 
 getcmdtail proto
+_writehex_nybble proto
 
 .8086
 
 .data
-stri BYTE 16 dup('0'),0                   ;stores string to print in third column
-totalbytes BYTE 0                      ;counter for number of bytes
+stri BYTE 16 dup('0'),0             ;; Stores string to print in third column
+totalbytes BYTE 0                   ;; Counter for number of bytes
 hexdigs BYTE "0123456789ABCDEF"
+hexMem BYTE 8 dup(0)                ;; 8 Bytes all initialized to 0 to store mem
 
 .code
+
 
 ;; Prints out a single space.
 printspace PROC
@@ -21,6 +24,7 @@ printspace PROC
     popf
     ret
 printspace ENDP
+
 
 ;; Prints the first column: the offset of each line from the beginning of the file.
 printcount PROC
@@ -36,6 +40,7 @@ printcount PROC
     popf
     ret
 printcount ENDP
+
 
 ;; Prints the end column: the chars represented by hex
 printend PROC
@@ -56,6 +61,7 @@ printend PROC
     ret
 printend ENDP
 
+
 ;; Stores a char in string in memory to print at end of line.
 ;; IN: al, a char to store
 ;; IN: CX, index to store char in
@@ -65,6 +71,7 @@ storechar PROC
     popf
     ret
 storechar ENDP
+
 
 ;; Prints a char in it's hex form
 ;; IN: al, a char to print
@@ -78,7 +85,8 @@ printchar PROC
     push ax
     mov dx,ax
     mov cx,4
-shift:  shr dl,1                             ;shift dl to get next nybble
+shift:  
+    shr dl,1                                 ;shift dl to get next nybble
     loop shift
 
     mov dh,0	                             ;clear the high bits of dx
@@ -101,6 +109,7 @@ shift:  shr dl,1                             ;shift dl to get next nybble
     popf
     ret
 printchar ENDP
+
 
 ;; Prints the output line by line
 ;; IN: al, a char
@@ -135,6 +144,71 @@ done:    pop ax
     popf
     ret
 print ENDP
+
+.code
+
+;; IN: CX, an integer representing how much memory to add to total (cx < 16)
+;; Prints out the total memory used by a file thus far
+setMem proc
+    pushf
+    push bx
+    push si
+
+    mov bx,offset hexMem    ;; bx = array to place into
+    mov si,offset hexMem
+    add si,lengthof hexmem
+    dec si                  ;; start at right hand side
+    clc
+
+    add [si],cx
+    cmp byte ptr [si],16
+    jb nc
+    sub byte ptr [si],16
+    stc
+    jmp cont
+
+nc:
+    clc
+    jmp done
+
+cont:
+    dec si
+    inc byte ptr [si]
+    cmp byte ptr [si],16
+    jb nc
+    sub byte ptr [si],16
+    stc
+    jmp cont
+
+done:
+    pop si
+    pop bx
+    popf
+    ret
+setMem endp
+
+
+;; Prints out the total memory used by a file thus far
+printMem proc
+    pushf
+    push ax
+    push bx
+    push cx
+
+    mov bx,offset hexMem   ;; bx = array to place mem into
+    mov cx,lengthof hexMem
+top:
+    mov dl,[bx]
+    call _writehex_nybble
+    inc bx
+    loop top
+
+    pop cx
+    pop bx
+    pop ax
+    popf
+    ret
+printMem endp
 
 
 .data
@@ -193,6 +267,10 @@ done:
     call CloseFile240
 
 quit:
+    call newline
+    mov cx,16
+    call setMem
+    call printMem
     mov ax,4c00h
     int 21h
 main endp
