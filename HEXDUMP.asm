@@ -28,21 +28,21 @@ getcmdtail proc
     push di
 
     mov di,dx
-    
+
     mov ch,0
     mov cl,es:[80h] ;; es has start of program segment
     jcxz done
     mov si,81h      ;; point to first byte of cmd tail
                     ;; in PSP.
 
-top:    
+top:
     mov al,es:[si]  ;; get a byte from cmd tail in PSP
     mov [di],al     ;; store into our data segment string
     inc di          ;; move along both strings
-    inc si          
-    loop top        
+    inc si
+    loop top
 
-done:   
+done:
     mov byte ptr [di],0 ;; null terminate our buffer
 
     pop di
@@ -55,6 +55,7 @@ getcmdtail endp
 
 
 ;; Prints out a single space.
+;; USES: AX - preserved
 printspace PROC
     pushf
     push ax
@@ -69,6 +70,7 @@ printspace ENDP
 
 
 ;; Prints the end column: the chars represented by hex
+;; USES: AX, DX - all preserved
 printend PROC
     pushf
     push ax
@@ -95,20 +97,23 @@ printend ENDP
 ;; Stores a char in string in memory to print at end of line.
 ;; IN: al, a char to store
 ;; IN: CX, index to store char in
+;; USES: AX, CX, DI - all preserved
 storechar PROC
     pushf
     push ax
+    push cx
     push di
 
     cmp al,32           ;; Checks to see if al is a printable char
     jae next
     mov al,'.'          ;; If not make it a period
 
-next:    
+next:
     mov di,cx
     mov stri[di],al     ;; Store char in string in memory
 
     pop di
+    pop cx
     pop ax
     popf
     ret
@@ -117,6 +122,7 @@ storechar ENDP
 
 ;; Prints a char in it's hex form
 ;; IN: al, a char to print
+;; USES: AX, CX, DX, SI - all preserved
 printchar PROC
     pushf
     push ax
@@ -153,18 +159,21 @@ shift:
 printchar ENDP
 
 
-;; Prints the output line by line
+;; Prints the output by taking a single char and count. If count is 0, print out memory
+;; count and then print the hex nybble. If count is 15, print hex nybble then the last
+;; column of corresponding characters and reset count. Otherwise, just print char as a
+;; hex nybble with correct spacing
 ;; IN: al, a char
 ;; IN: CX, a count (0-15)
 ;; OUT: CX, the next count
+;; USES: AX - preserved, CX - updated
 print PROC
     pushf
     push ax
 
     cmp cx,0
     jnz next
-    call printMem
-    ;;call printcount   ;; prints the first column
+    call printMem       ;; prints the first column
     call printspace
     call printspace     ;; print spacing
 
@@ -183,7 +192,7 @@ incr:
     jnz done
     call printspace     ;; print extra space
     call printend       ;; prints the last column
-    call setMem
+    call setMem         ;; updates the memory
     mov cx,0            ;; reset count
 
 done:
@@ -193,7 +202,9 @@ done:
 print ENDP
 
 
+;; Prints the very last string at the end, when it is not a length of 16
 ;; IN: CX, length of string to print
+;; USES: AX, BX, CX, DX, DI - all preserved
 printfinal PROC
     pushf
     push ax
@@ -205,8 +216,8 @@ printfinal PROC
     push cx
     mov ah,03h
     mov bh,0
-    int 10h
-    mov dl,60
+    int 10h                 ;; interrupt to get the cursor position and store in dh and dl
+    mov dl,60               ;; move cursor column
     call JumpCursor
     pop cx
 
@@ -215,8 +226,8 @@ printfinal PROC
     mov al,'|'
     call WriteChar240
 
-top:    mov al,stri[di]
-    call WriteChar240
+top:    mov al,stri[di]     ;; store a char of the string
+    call WriteChar240       ;; print char
     inc di
     loop top
 
@@ -335,7 +346,7 @@ main proc
     cmp byte ptr es:[80h],0   ;; if we have no tail at all
     jnz cont
 
-    mov dx,offset errnocmd  
+    mov dx,offset errnocmd
     call writeString240       ;; Print("Usage: cat filename")
     call newline
     jmp quit
@@ -371,10 +382,10 @@ done:
 
     cmp cx,0
     jz after
-    call printfinal
+    call printfinal           ;; prints the last string if cx is not 0
     call newline
 
-after:  
+after:
     call setMem               ;; set memory for if line didn't end on multple of 16
     call printMem
 
